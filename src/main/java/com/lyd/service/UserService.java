@@ -11,6 +11,7 @@ import com.lyd.controller.dto.UserRegDTO;
 import com.lyd.entity.*;
 import com.lyd.mapper.*;
 import com.lyd.utils.OssUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 public class UserService {
 
@@ -38,6 +40,10 @@ public class UserService {
     private UserCollectionMapper userCollectionMapper;
     @Resource
     private PostCommentsMapper postCommentsMapper;
+    @Resource
+    private CommentCommentsMapper commentCommentsMapper;
+    @Resource
+    private UserReportMapper userReportMapper;
     @Autowired
     private OSSClient ossClient;
     @Autowired
@@ -110,6 +116,126 @@ public class UserService {
         userInfoMapper.updateById(userInfo);
     }
 
+    public void banUser(Long userId) {
+        userMapper.deleteById(userId);
+        int user = userInfoMapper.deleteById(userId);
+        log.info("逻辑删除{}条user信息",user);
+        QueryWrapper<Posts> postWrapper = new QueryWrapper<>();
+        postWrapper.eq("user_id",userId);
+        int post = postsMapper.delete(postWrapper);
+        log.info("逻辑删除{}条post信息",post);
+        QueryWrapper<PostComments> pcWrapper = new QueryWrapper<>();
+        pcWrapper.eq("user_id",userId);
+        int pc = postCommentsMapper.deleteById(userId);
+        log.info("逻辑删除{}条pc信息",pc);
+        QueryWrapper<CommentComments> ccWrapper = new QueryWrapper<>();
+        ccWrapper.eq("from_id",userId);
+        int cc = commentCommentsMapper.delete(ccWrapper);
+        log.info("逻辑删除{}条cc信息",cc);
+        QueryWrapper<Video> videoWrapper = new QueryWrapper<>();
+        videoWrapper.eq("user_id",userId);
+        int video = videoMapper.delete(videoWrapper);
+        log.info("逻辑删除{}条video信息",video);
+        QueryWrapper<Document> docWrapper = new QueryWrapper<>();
+        docWrapper.eq("publisher_id",userId);
+        int doc = documentMapper.delete(docWrapper);
+        log.info("逻辑删除{}条doc信息",doc);
+    }
+
+    public void unbanUser(Long userId) {
+        userMapper.unbanUser(userId);
+        postsMapper.unbanPostByUser(userId);
+        postCommentsMapper.unbanPcByUser(userId);
+        commentCommentsMapper.unbanCcByUser(userId);
+        videoMapper.unbanVideo(userId);
+        documentMapper.unbanDoc(userId);
+    }
+
+    public void addReport(Long userId,Long targetId,Short sort,String reason) {
+        UserReport userReport = new UserReport();
+        userReport.setUser_id(userId);
+        userReport.setTarget_id(targetId);
+        userReport.setSort(sort);
+        userReport.setReason(reason);
+        userReportMapper.insert(userReport);
+        QueryWrapper<UserReport> wrapper = new QueryWrapper<>();
+        wrapper.eq("target_id",targetId);
+        Long reportedNum = userReportMapper.selectCount(wrapper);
+        if (reportedNum>=10) {
+            if (sort==1) {
+                log.info("该用户已被封禁");
+                // TODO
+            } else if (sort==2) {
+                log.info("该帖子已被封禁");
+                // TODO
+            } else if (sort==3) {
+                log.info("该回答已被封禁");
+                // TODO
+            } else if (sort==4) {
+                log.info("该评论已被封禁");
+                // TODO
+            }
+        }
+
+    }
+
+    public void delReport(Long targetId,Short sort) {
+        // 删除举报记录
+        QueryWrapper<UserReport> wrapper = new QueryWrapper<>();
+        wrapper.eq("target_id",targetId);
+        wrapper.eq("sort",sort);
+        userReportMapper.delete(wrapper);
+
+    }
+
+    public List<ReportVO> getReported(Integer pageNum,Integer pageSize) {
+        QueryWrapper<UserReport> wrapper = new QueryWrapper<>();
+        wrapper.orderByDesc("gmt_modified");
+        wrapper.last(" limit "+(pageNum-1)*pageSize+" , "+pageSize);
+        List<UserReport> userReports = userReportMapper.selectList(wrapper);
+        ArrayList<ReportVO> res = new ArrayList<>();
+        for (UserReport userReport : userReports) {
+            ReportVO reportVO = new ReportVO();
+            reportVO.setReportId(userReport.getId().toString());
+            reportVO.setReason(userReport.getReason());
+
+            UserInfo userInfo = userInfoMapper.selectById(userReport.getUser_id());
+            reportVO.setReporterId(userInfo.getId().toString());
+            reportVO.setReporterHead(userInfo.getHead());
+            reportVO.setReporterName(userInfo.getNickname());
+
+            Long targetId = userReport.getTarget_id();
+            reportVO.setReportedId(targetId.toString());
+            Short sort = userReport.getSort();
+            if (sort==1) {
+                reportVO.setSort("用户");
+                UserInfo target = userInfoMapper.selectById(targetId);
+                reportVO.setContent(target.getNickname());
+                reportVO.setPhoto(target.getHead());
+            } else if (sort==2) {
+                reportVO.setSort("帖子");
+                Posts target = postsMapper.selectById(targetId);
+                reportVO.setContent(target.getContent());
+            } else if (sort==3) {
+                reportVO.setSort("回答");
+                PostComments target = postCommentsMapper.selectById(targetId);
+                reportVO.setContent(target.getContent());
+            } else if (sort==4) {
+                reportVO.setSort("评论");
+                CommentComments target = commentCommentsMapper.selectById(targetId);
+                reportVO.setContent(target.getContent());
+            }
+
+            res.add(reportVO);
+        }
+        return res;
+    }
+
+    public Long getReportedNum() {
+        return userReportMapper.selectCount(null);
+    }
+
+
     public User getUserByEmail(String email) {
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         wrapper.eq("email",email);
@@ -174,12 +300,8 @@ public class UserService {
         wrapper.eq("user_id",userId);
         wrapper.eq("target_id",targetId);
         wrapper.eq("sort",sort);
-        UserCollection result = userCollectionMapper.selectOne(wrapper);
-        if (result==null) {
-            return false;
-        } else {
-            return true;
-        }
+        List<UserCollection> res = userCollectionMapper.selectList(wrapper);
+        return !res.isEmpty();
     }
 
     public String uploadUserHead (MultipartFile head,Long userId) {
@@ -192,6 +314,7 @@ public class UserService {
         UserVO userVO = new UserVO();
         userVO.setUserId(id.toString());
         userVO.setUsername(userInfo.getNickname());
+        userVO.setUserhead(userInfo.getHead());
         userVO.setSignature(userInfo.getSignature());
         Boolean gender = userInfo.getGender();
         if (gender == null) {
@@ -238,10 +361,22 @@ public class UserService {
         }
     }
 
-    public Long getMyPostCount(Long userId) {
-        QueryWrapper<Posts> wrapper = new QueryWrapper<>();
-        wrapper.eq("user_id",userId);
-        return postsMapper.selectCount(wrapper);
+    public Long getMyPostCount(Long userId,Short sort) {
+        Long cnt = null;
+        if (sort==1) {
+            QueryWrapper<Posts> wrapper = new QueryWrapper<>();
+            wrapper.eq("user_id",userId);
+            cnt = postsMapper.selectCount(wrapper);
+        } else if (sort==2) {
+            QueryWrapper<Document> docWrapper = new QueryWrapper<>();
+            docWrapper.eq("publisher_id",userId);
+            cnt = documentMapper.selectCount(docWrapper);
+            System.out.println(cnt);
+            QueryWrapper<Video> videoWrapper = new QueryWrapper<>();
+            videoWrapper.eq("user_id",userId);
+            cnt += videoMapper.selectCount(videoWrapper);
+        }
+        return cnt;
     }
 
     public List<MyJoin> getMyJoinById(Long userId,Integer pageNum,Integer pageSize) {
@@ -252,6 +387,9 @@ public class UserService {
         List<PostComments> postComments = postCommentsMapper.selectList(wrapper);
         ArrayList<MyJoin> res = new ArrayList<>();
         for (PostComments pc : postComments) {
+            if (postsMapper.selectById(pc.getPost_id())==null) {
+                continue;
+            }
             MyJoin myJoin = new MyJoin();
             myJoin.setPostId(pc.getPost_id().toString());
             myJoin.setCommentId(pc.getId().toString());
@@ -268,12 +406,27 @@ public class UserService {
     }
 
     public void addHistory(Long userId,Long targetId,Short sort) {
-        History history = new History();
-        history.setUser_id(userId);
-        history.setTarget_id(targetId);
-        history.setSort(sort);
+        // 查先前也没有产生过历史记录
+        QueryWrapper<History> historyWrapper = new QueryWrapper<>();
+        historyWrapper.eq("user_id",userId);
+        historyWrapper.eq("target_id",targetId);
+        if (sort==1) {
+            historyWrapper.eq("sort",sort);
+        } else if (sort==2) {
+            historyWrapper.and(wrapper->wrapper.eq("sort",2).or().eq("sort",3));
+        }
+        History his = historyMapper.selectOne(historyWrapper);
+        if (his==null) {
+            History history = new History();
+            history.setUser_id(userId);
+            history.setTarget_id(targetId);
+            history.setSort(sort);
 
-        historyMapper.insert(history);
+            historyMapper.insert(history);
+        } else {
+            his.setGmt_modified(null);
+            historyMapper.updateById(his);
+        }
     }
 
     public void delAllHistory(Long userId,Short sort) {
@@ -308,7 +461,9 @@ public class UserService {
             historyVO.setDate(sdf.format(history.getGmt_modified()));
             if (history.getSort()==1) {
                 historyVO.setSort("帖子");
-                historyVO.setTitle(postsMapper.selectById(history.getTarget_id()).getTitle());
+                Posts post = postsMapper.selectById(history.getTarget_id());
+                historyVO.setTitle(post.getTitle());
+                historyVO.setDiscussNum(post.getDiscuss_num().toString());
             } else if (history.getSort()==2) {
                 historyVO.setSort("文档");
                 historyVO.setTitle(documentMapper.selectById(history.getTarget_id()).getName());
@@ -403,7 +558,11 @@ public class UserService {
                 collectionVO.setTitle(postsMapper.selectById(uc.getTarget_id()).getTitle());
                 collectionVO.setSort("帖子");
             } else if (sort==1) {   // 回复
-                collectionVO.setTitle(postCommentsMapper.selectById(uc.getTarget_id()).getContent());
+                PostComments pc = postCommentsMapper.selectById(uc.getTarget_id());
+                if (postsMapper.selectById(pc.getPost_id())==null) {
+                    continue;
+                }
+                collectionVO.setTitle(pc.getContent());
             } else if (sort==2) {   // 文档
                 collectionVO.setTitle(documentMapper.selectById(uc.getTarget_id()).getName());
             }

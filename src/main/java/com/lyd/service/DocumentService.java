@@ -199,19 +199,13 @@ public class DocumentService {
     /**
      * @desc    模糊查询文档名称
      * @param content   查询词
-     * @param type  排序类型(1热门|2最新)
      * @param pageNum   分页参数
      * @param pageSize  分页参数
      * @return
      */
-    public List<DocVO> search(String content,Short type,Integer pageNum,Integer pageSize) {
+    public List<DocVO> search(String content,Integer pageNum,Integer pageSize) {
         QueryWrapper<Document> wrapper = new QueryWrapper<>();
         wrapper.like("name",content);
-        if (type==1) {
-            wrapper.orderByDesc("downloads");
-        } else if (type==2) {
-            wrapper.orderByDesc("gmt_created");
-        }
         wrapper.last(" limit "+(pageNum-1)*pageSize+","+pageSize);
         List<Document> documents = documentMapper.selectList(wrapper);
         ArrayList<DocVO> res = new ArrayList<>();
@@ -236,7 +230,12 @@ public class DocumentService {
             res.add(docVO);
         }
         return res;
+    }
 
+    public Long getSearchCount(String content) {
+        QueryWrapper<Document> wrapper = new QueryWrapper<>();
+        wrapper.like("name",content);
+        return documentMapper.selectCount(wrapper);
     }
 
 }

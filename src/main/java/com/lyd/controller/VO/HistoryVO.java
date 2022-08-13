@@ -12,5 +12,6 @@ public class HistoryVO {
     private String title;
     private String sort;
     private String date;
+    private String discussNum;
 
 }

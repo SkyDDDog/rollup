@@ -134,6 +134,30 @@ public class UserController {
         return Result.success();
     }
 
+    @ApiOperation("封禁用户(及用户发布有关资料)")
+    @DeleteMapping("/ban/{userId}")
+    public Result banUser(@PathVariable Long userId) {
+        log.info("访问了/ban/{}接口",userId);
+        if (userMapper.selectById(userId)==null) {
+            return Result.error(Constants.CODE_400,"不存在该用户");
+        }
+        userService.delReport(userId,(short)1);
+        userService.banUser(userId);
+        return Result.success();
+    }
+
+    @ApiOperation("解封用户")
+    @GetMapping("/unban/{userId}")
+    public Result unbanUser(@PathVariable Long userId) {
+        if (userMapper.selectById(userId)==null) {
+            return Result.error(Constants.CODE_400,"不存在该用户");
+        }
+        userService.unbanUser(userId);
+        return Result.success();
+    }
+
+
+
     /**
      * 获取验证码
      */
@@ -210,10 +234,13 @@ public class UserController {
         return Result.success(byId);
     }
 
-    @ApiOperation("我发布的")
+    @ApiOperation("我发布的(sort:1帖子|2资料)")
     @GetMapping("/myPost/{userId}/{sort}/{pageNum}/{pageSize}")
     public Result getMyPost(@PathVariable Long userId,@PathVariable Short sort,@PathVariable Integer pageNum,@PathVariable Integer pageSize) {
         log.info("访问了/user/myPost/{}/{}/{}",userId,pageNum,pageSize);
+        if (sort!=1 && sort!=2) {
+            return Result.error(Constants.CODE_400,"sort:1帖子|2资料");
+        }
         if (pageNum<1) {
             return Result.error(Constants.CODE_400,"页码从第1页开始");
         }
@@ -222,7 +249,7 @@ public class UserController {
         }
 
         List<MyPost> myPostById = userService.getMyPostById(userId,sort, pageNum, pageSize);
-        return Result.success(myPostById,userService.getMyPostCount(userId));
+        return Result.success(myPostById,userService.getMyPostCount(userId,sort));
     }
 
     @ApiOperation("我参与的")
@@ -386,6 +413,27 @@ public class UserController {
         userService.unCollect(userId,targetId,sort);
         return Result.success();
     }
+
+    @ApiOperation("举报(sort:1用户|2帖子|3回答|4评论)")
+    @PostMapping("/report/{sort}/{userId}/{targetId}")
+    public Result report(@PathVariable Short sort,@PathVariable Long userId,@PathVariable Long targetId,@RequestParam(required = false) String reason) {
+        if (sort!=1 && sort!=2 && sort!=3 && sort!=4) {
+            return Result.error(Constants.CODE_400,"sort:sort:1用户|2帖子|3回答|4评论");
+        }
+        userService.addReport(userId,targetId,sort,reason);
+        return Result.success();
+    }
+
+    @ApiOperation("被举报名单")
+    @GetMapping("/reported/{pageNum}/{pageSize}")
+    public Result getReported(@PathVariable Integer pageNum,@PathVariable Integer pageSize) {
+        if (pageNum<1) {
+            return Result.error(Constants.CODE_400,"应从第一页开始");
+        }
+        List<ReportVO> reported = userService.getReported(pageNum, pageSize);
+        return Result.success(reported, userService.getReportedNum());
+    }
+
 
 
 }

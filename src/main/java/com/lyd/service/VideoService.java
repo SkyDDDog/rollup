@@ -1,8 +1,10 @@
 package com.lyd.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.lyd.config.OssPath;
 import com.lyd.controller.VO.VideoVO;
+import com.lyd.entity.Document;
 import com.lyd.entity.Video;
 import com.lyd.mapper.VideoMapper;
 import com.lyd.utils.FileUtils;
@@ -14,6 +16,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Slf4j
@@ -67,6 +71,31 @@ public class VideoService {
         videoVO.setUserId(video.getUser_id().toString());
 
         return videoVO;
+    }
+
+    public List<VideoVO> search (String content,Integer pageNum,Integer pageSize) {
+        QueryWrapper<Video> wrapper = new QueryWrapper<>();
+        wrapper.like("name",content);
+        wrapper.last(" limit "+(pageNum-1)*pageSize+","+pageSize);
+        List<Video> videos = videoMapper.selectList(wrapper);
+        ArrayList<VideoVO> res = new ArrayList<>();
+        for (Video video : videos) {
+            VideoVO videoVO = new VideoVO();
+            videoVO.setVideoId(video.getId().toString());
+            videoVO.setUserId(video.getUser_id().toString());
+            videoVO.setVideoName(video.getName());
+            videoVO.setVideoPhoto(video.getPhoto());
+            videoVO.setVideoKind(video.getKind());
+
+            res.add(videoVO);
+        }
+        return res;
+    }
+
+    public Long getSearchCount (String content) {
+        QueryWrapper<Video> wrapper = new QueryWrapper<>();
+        wrapper.like("name",content);
+        return videoMapper.selectCount(wrapper);
     }
 
 

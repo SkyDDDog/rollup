@@ -10,6 +10,7 @@ public class UserVO {
 
     private String userId;
     private String username;
+    private String userhead;
     private String signature;
     private String gender;
     private String school;

@@ -12,6 +12,7 @@ import com.lyd.mapper.UserMapper;
 import com.lyd.service.CommentsService;
 import com.lyd.service.PostsService;
 import com.lyd.service.UploadService;
+import com.lyd.service.UserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.models.auth.In;
@@ -47,6 +48,8 @@ public class CommentController {
     private UserMapper userMapper;
     @Autowired
     private PostsService postsService;
+    @Autowired
+    private UserService userService;
 
 
     @ApiOperation("分页获取某回答下评论")
@@ -60,7 +63,7 @@ public class CommentController {
             return Result.error(Constants.CODE_400,"该回答不存在");
         }
         List<CCVO> ccvos = commentsService.getCcByCommentId(answerId,pageNum,pageSize);
-        return Result.success(ccvos);
+        return Result.success(ccvos, commentsService.getCcCount(answerId));
     }
 
     @ApiOperation("获取某评论信息")
@@ -80,11 +83,19 @@ public class CommentController {
         return Result.success(ccvo);
     }
 
-    @ApiOperation("删除某条评论")
-    @DeleteMapping("/del/{id}")
-    public Result delCc(@PathVariable Long id) {
-        log.info("访问了/comment/del/"+id+"接口");
+    @ApiOperation("封禁某条评论")
+    @DeleteMapping("/ban/{id}")
+    public Result banCc(@PathVariable Long id) {
+        log.info("访问了/comment/ban/"+id+"接口");
+        userService.delReport(id,(short)4);
         commentsService.delCComments(id);
+        return Result.success();
+    }
+
+    @ApiOperation("取消封禁某条评论")
+    @GetMapping("/unban/{id}")
+    public Result unbanCc(@PathVariable Long id) {
+        commentsService.releaseCc(id);
         return Result.success();
     }
 

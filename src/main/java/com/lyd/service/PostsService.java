@@ -4,10 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.lyd.controller.VO.CommentsVO;
 import com.lyd.controller.VO.PostVO;
 import com.lyd.controller.VO.PrePostVO;
-import com.lyd.entity.Posts;
-import com.lyd.entity.UserCollection;
-import com.lyd.entity.UserInfo;
-import com.lyd.entity.UserLike;
+import com.lyd.entity.*;
 import com.lyd.mapper.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -32,6 +29,8 @@ public class PostsService {
     private UserCollectionMapper userCollectionMapper;
     @Resource
     private UserLikeMapper userLikeMapper;
+    @Resource
+    private UserReportMapper userReportMapper;
     @Autowired
     private UserService userService;
     @Resource
@@ -50,6 +49,22 @@ public class PostsService {
         post.setUser_id(userId);
 
         postsMapper.insert(post);
+    }
+
+    /**
+     * @desc 逻辑删除帖子
+     * @param postId    帖子id
+     */
+    public void delPost(Long postId) {
+        postsMapper.deleteById(postId);
+    }
+
+    /**
+     * @desc 取消逻辑删除
+     * @param postId    帖子id
+     */
+    public void releasePost(Long postId) {
+        postsMapper.unbanPostById(postId);
     }
 
     /**
@@ -161,16 +176,12 @@ public class PostsService {
                 }
             }
             QueryWrapper<UserCollection> collectionWrapper = new QueryWrapper<>();
-            collectionWrapper.eq("kind",0);
+            collectionWrapper.eq("sort",0);
             collectionWrapper.eq("target_id",post.getId());
             if (userId!=null) {
                 collectionWrapper.eq("user_id",userId);
                 List<UserCollection> userCollections = userCollectionMapper.selectList(collectionWrapper);
-                if (userCollections.isEmpty()) {
-                    postVO.setIsCollected(false);
-                } else {
-                    postVO.setIsCollected(true);
-                }
+                postVO.setIsCollected(!userCollections.isEmpty());
             }
 
             res.add(postVO);
@@ -193,7 +204,7 @@ public class PostsService {
      * @param postId    帖子id
      * @return  PostVO
      */
-    public PostVO getById(Long postId) {
+    public PostVO getById(Long postId,Long userId) {
         Posts post = postsMapper.selectById(postId);
         PostVO postVO = new PostVO();
         postVO.setPostId(post.getId().toString());
@@ -207,8 +218,13 @@ public class PostsService {
         postVO.setUserName(userInfo.getNickname());
 
         QueryWrapper<UserCollection> collectionWrapper = new QueryWrapper<>();
-        collectionWrapper.eq("target_id",postId);
         collectionWrapper.eq("sort",0);
+        collectionWrapper.eq("target_id",post.getId());
+        if (userId!=null) {
+            collectionWrapper.eq("user_id",userId);
+            List<UserCollection> userCollections = userCollectionMapper.selectList(collectionWrapper);
+            postVO.setIsCollected(!userCollections.isEmpty());
+        }
         String collectNum = userCollectionMapper.selectCount(collectionWrapper).toString();
         postVO.setCollectNum(collectNum);
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
@@ -221,20 +237,14 @@ public class PostsService {
     /**
      * @desc    模糊查询帖子标题
      * @param content   查询词
-     * @param type  排序类型(1最高讨论数/2最新发布)
      * @param pageNum   分页参数
      * @param pageSize  分页参数
      * @return
      */
-    public List<PostVO> search(String content,Short type,Integer pageNum,Integer pageSize) {
+    public List<PostVO> search(String content,Integer pageNum,Integer pageSize) {
         QueryWrapper<Posts> wrapper = new QueryWrapper<>();
         wrapper.like("content",content);
         wrapper.orderByDesc("discuss_num");
-        if (type==1) {
-            wrapper.orderByDesc("discuss_num");
-        } else if (type==2) {
-            wrapper.orderByDesc("gmt_created");
-        }
         wrapper.last(" limit "+ (pageNum-1)*pageSize +","+pageSize);
         List<Posts> posts = postsMapper.selectList(wrapper);
         ArrayList<PostVO> res = new ArrayList<>();
@@ -249,5 +259,13 @@ public class PostsService {
         }
         return res;
     }
+
+    public Long getSearchCount(String content) {
+        QueryWrapper<Posts> wrapper = new QueryWrapper<>();
+        wrapper.like("content",content);
+        return postsMapper.selectCount(wrapper);
+
+    }
+
 
 }

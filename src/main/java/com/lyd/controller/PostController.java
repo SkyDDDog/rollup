@@ -2,16 +2,10 @@ package com.lyd.controller;
 
 import com.lyd.common.Constants;
 import com.lyd.common.Result;
-import com.lyd.controller.VO.CommentsVO;
-import com.lyd.controller.VO.DocVO;
-import com.lyd.controller.VO.PostVO;
-import com.lyd.controller.VO.PrePostVO;
+import com.lyd.controller.VO.*;
 import com.lyd.entity.Posts;
 import com.lyd.mapper.PostsMapper;
-import com.lyd.service.CommentsService;
-import com.lyd.service.DocumentService;
-import com.lyd.service.PostsService;
-import com.lyd.service.UserService;
+import com.lyd.service.*;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -40,11 +34,28 @@ public class PostController {
     private DocumentService documentService;
     @Autowired
     private UserService userService;
+    @Autowired
+    private VideoService videoService;
 
     @ApiOperation("发布帖子")
     @PostMapping("/{userId}/{title}")
     public Result newPost(@PathVariable Long userId,@PathVariable String title,@RequestParam(required = false) String content) {
         postsService.newPost(title,userId,content);
+        return Result.success();
+    }
+
+    @ApiOperation("封禁帖子")
+    @DeleteMapping("/ban/{postId}")
+    public Result banPost(@PathVariable Long postId) {
+        userService.delReport(postId,(short)2);
+        postsService.delPost(postId);
+        return Result.success();
+    }
+
+    @ApiOperation("解封帖子")
+    @GetMapping("/unban/{postId}")
+    public Result unbanPost(@PathVariable Long postId) {
+        postsService.releasePost(postId);
         return Result.success();
     }
 
@@ -100,7 +111,7 @@ public class PostController {
     @GetMapping("/{postId}")
     public Result getById(@PathVariable Long postId,@RequestParam(required = false) Long userId) {
         log.info("访问了/posts/"+postId+"接口");
-        PostVO p = postsService.getById(postId);
+        PostVO p = postsService.getById(postId,userId);
         if (userId!=null) {
             log.info("产生帖子{}的历史记录",postId);
             userService.addHistory(userId,postId,(short)1);
@@ -109,31 +120,30 @@ public class PostController {
         return Result.success(p);
     }
 
-    @ApiOperation("搜索(sort:1帖子/2资料 | type:1热门/2最新)")
-    @GetMapping("/search/{sort}/{type}/{pageNum}/{pageSize}/{content}")
+    @ApiOperation("搜索(sort:1帖子|2资料|3视频)")
+    @GetMapping("/search/{sort}/{pageNum}/{pageSize}/{content}")
     public Result search(@PathVariable String content,
                          @PathVariable @ApiParam(value = "1帖子/2资料",defaultValue = "1") Short sort,
-                         @PathVariable @ApiParam(value = "1热门/2最新",defaultValue = "1") Short type,
                          @PathVariable Integer pageNum, @PathVariable Integer pageSize) {
-        log.info("访问了/posts/search/"+sort+"/"+type+"/"+pageNum+"/"+pageSize+"接口");
+        log.info("访问了/posts/search/"+sort+"/"+pageNum+"/"+pageSize+"接口");
         log.info("查询了"+content);
         List<PostVO> searchPost;
         List<DocVO> searchDoc;
-        if (type!=1 && type!=2) {
-            return Result.error(Constants.CODE_400,"排序类型:1热门/2最新");
-        }
+        List<VideoVO> searchVideo;
         if (pageNum<1) {
             return Result.error(Constants.CODE_400,"应从第1页开始查询");
         }
         if (sort==1) {
-            searchPost = postsService.search(content, type, pageNum, pageSize);
-            return Result.success(searchPost, postsService.getCount());
+            searchPost = postsService.search(content, pageNum, pageSize);
+            return Result.success(searchPost, postsService.getSearchCount(content));
         } else if (sort==2) {
-            searchDoc = documentService.search(content,type,pageNum,pageSize);
-
-            return Result.success(searchDoc,documentService.getCount(null));
+            searchDoc = documentService.search(content,pageNum,pageSize);
+            return Result.success(searchDoc,documentService.getSearchCount(content));
+        } else if (sort==3) {
+            searchVideo = videoService.search(content,pageNum,pageSize);
+            return Result.success(searchVideo,videoService.getSearchCount(content));
         } else {
-            return Result.error(Constants.CODE_400,"分区类型:1帖子/2资料");
+            return Result.error(Constants.CODE_400,"sort:1帖子|2资料|3视频");
         }
     }
 

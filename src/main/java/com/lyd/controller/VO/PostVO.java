@@ -14,6 +14,7 @@ public class PostVO {
     private String userName;
     private String discussNum;
     private String collectNum;
+    private Boolean isCollected;
     private String date;
 
 

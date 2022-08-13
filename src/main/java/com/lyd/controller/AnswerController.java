@@ -9,6 +9,7 @@ import com.lyd.entity.Posts;
 import com.lyd.mapper.PostCommentsMapper;
 import com.lyd.mapper.PostsMapper;
 import com.lyd.service.CommentsService;
+import com.lyd.service.UserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,8 @@ public class AnswerController {
 
     @Autowired
     private CommentsService commentsService;
+    @Autowired
+    private UserService userService;
     @Resource
     private PostCommentsMapper postCommentsMapper;
     @Resource
@@ -76,6 +79,22 @@ public class AnswerController {
         }
         CommentsVO commentsVO = commentsService.updComment(id, content);
         return Result.success(commentsVO);
+    }
+
+    @ApiOperation("封禁回答")
+    @DeleteMapping("/ban/{pcId}")
+    public Result banPc(@PathVariable Long pcId) {
+        userService.delReport(pcId,(short)3);
+
+        commentsService.delPostComments(pcId);
+        return Result.success();
+    }
+
+    @ApiOperation("取消封禁回答")
+    @GetMapping("/unban/{pcId}")
+    public Result unbanPc(@PathVariable Long pcId) {
+        commentsService.releasePc(pcId);
+        return Result.success();
     }
 
     @ApiOperation("删除某回答")

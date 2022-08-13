@@ -5,6 +5,7 @@ import com.lyd.controller.VO.MyPost;
 import com.lyd.entity.User;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -20,5 +21,8 @@ public interface UserMapper extends BaseMapper<User> {
             "(SELECT id,`name`,NULL,\"视频\",DATE_FORMAT(gmt_modified,'%Y-%m-%d') FROM video  WHERE user_id = #{userId})" +
             "limit #{pageNum} , #{pageSize}")
     public List<MyPost> getMyPost(Long userId,Integer pageNum,Integer pageSize);
+
+    @Update("UPDATE `user` SET is_deleted=0 WHERE id = #{userId}")
+    public void unbanUser(Long userId);
 
 }

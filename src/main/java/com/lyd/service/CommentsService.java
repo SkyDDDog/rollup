@@ -99,6 +99,10 @@ public class CommentsService {
         postCommentsMapper.deleteById(commentId);
     }
 
+    public void releasePc(Long pcId) {
+        postCommentsMapper.unbanPcById(pcId);
+    }
+
     /**
      * @desc 根据问答的评论id来删除某个帖子下某个回答的评论
      * @param ccId 评论id
@@ -112,6 +116,10 @@ public class CommentsService {
         postsMapper.updateById(post);
         // 删除cc记录
         commentCommentsMapper.deleteById(ccId);
+    }
+
+    public void releaseCc(Long ccId) {
+        commentCommentsMapper.unbanCcById(ccId);
     }
 
     /**
@@ -198,11 +206,15 @@ public class CommentsService {
 
 //            ccvo.setLikes(cc.getLikes());
 
-
-
             res.add(ccvo);
         }
         return res;
+    }
+
+    public Long getCcCount(Long commentId) {
+        QueryWrapper<CommentComments> wrapper = new QueryWrapper<>();
+        wrapper.eq("comment_id",commentId);
+        return commentCommentsMapper.selectCount(wrapper);
     }
 
     /**
