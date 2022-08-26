@@ -1,0 +1,87 @@
+server:
+  port: 9091
+#  servlet:
+#    context-path: /api
+
+token:
+  #token失效时间（不是refreshToken）(这是自定义的)(秒)
+  expirationSeconds: 1500
+  #默认7天登录有效(根据业务更改)
+  validTime: 7
+
+spring:
+  servlet:
+    multipart:
+      max-request-size: 100MB
+      max-file-size: 100MB
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: lear_yd@qq.com
+    password: gaedwcddqujebijf
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          ssl:
+            enable: true
+  redis:
+#    host: localhost
+#    port: 6379
+#    password:
+    host: redis
+    port: 6379
+  datasource:
+    host: mysql
+    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://localhost:3306/rollup?serverTimezone=GMT%2b8
+#    username: root
+#    password: 9738faq
+    url: jdbc:mysql://${spring.datasource.host}:3306/rollup?serverTimezone=GMT%2b8
+    username: root
+    password: 123456
+#     druid数据源配置
+    type: com.alibaba.druid.pool.DruidDataSource
+    initialSize: 5
+    minIdle: 5
+    maxActive: 20
+    maxWait: 60000
+    timeBetweenEvictionRunsMillis: 60000
+    minEvictableIdleTimeMillis: 300000
+    validationQuery: SELECT 1 FROM DUAL
+    testWhileIdle: true
+    testOnBorrow: false
+    testOnReturn: false
+    poolPreparedStatements: true
+    #   配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
+    filters: stat,wall,slf4j
+    maxPoolPreparedStatementPerConnectionSize: 20
+    useGlobalDataSourceStat: true
+    connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=500
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: false
+  global-config:
+    db-config:
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+logging:
+  config: classpath:logback-spring.xml
+
+aliyun:
+  accessKeyId: LTAI5tBXGoDcmhJ7FEXkb3Qm
+  accessKeySecret: P6lxjYm4yVopWMA0zHCUdCuG418MPt
+  oss:
+    endpoint: oss-accelerate.aliyuncs.com
+    bucketName: rollup
+    urlPrefix: https://rollup.oss-cn-hangzhou.aliyuncs.com/
+    documentPath: document/
+    thumbnailPath: thumbnail/
+    userHeadPath: user_head/
+    videoPhotoPath: video_photo/
