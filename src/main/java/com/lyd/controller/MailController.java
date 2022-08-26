@@ -51,13 +51,6 @@ public class MailController {
     @ApiOperation("给对应用户发送邮件验证码")
     public Result sendEmail(@PathVariable String email) {
         log.info("访问了/mail/send/"+email+"接口");
-//        List<UserDetails> user = userService.getUserbyEmail(email);
-//        if (user.isEmpty()) {
-//            return Result.error(Constants.CODE_401,"不存在该邮箱注册的用户");
-//        }
-
-//        System.out.println(email);
-//        email = "362664609@qq.com";
         //key 邮箱号  value 验证码
         String code = redisTemplate.opsForValue().get(email);
         //从redis获取验证码，如果获取获取到，返回ok

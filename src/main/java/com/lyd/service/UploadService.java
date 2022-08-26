@@ -46,6 +46,13 @@ public class UploadService {
         return OssUtils.saveImg(multipartFile,ossClient,fileName,folder);
     }
 
+    /**
+     * @desc    上传文档
+     * @param multipartFile 文档
+     * @param userId    用户id
+     * @param kind      文档类型
+     * @return
+     */
     public Document uploadDoc(MultipartFile multipartFile,Long userId,String kind) {
         Document document = new Document();
         Long id = IdWorker.getId(document);
@@ -113,6 +120,10 @@ public class UploadService {
         return document;
     }
 
+    /**
+     * @desc    将文档信息保存至数据
+     * @param document  文档对象
+     */
     public void uploadInfo2DB(Document document) {
         documentMapper.insert(document);
     }

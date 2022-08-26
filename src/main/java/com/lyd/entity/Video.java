@@ -22,6 +22,7 @@ public class Video {
     private Long user_id;
     private String kind;
     private String photo;
+    private Integer download;
 
     @TableLogic
     private boolean is_deleted;

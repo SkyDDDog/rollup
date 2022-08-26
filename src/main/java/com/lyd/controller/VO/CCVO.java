@@ -15,16 +15,9 @@ public class CCVO {
 
     private String fromId;
     private String toId;
-    //TODO
-    // 待补充用户相关信息
     private String username;
     private String userhead;
-
-
     private Integer likes;
-
-    //TODO
-    // 待补充日期信息
     private String date;
 
 }

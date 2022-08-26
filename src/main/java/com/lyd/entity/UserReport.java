@@ -22,6 +22,7 @@ public class UserReport {
     private Long target_id;
     private Short sort;
     private String reason;
+    private Short result;
 
     @TableLogic
     private boolean is_deleted;

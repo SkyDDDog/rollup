@@ -3,23 +3,35 @@ package com.lyd.controller;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.lyd.controller.VO.MsgVO;
+import com.lyd.entity.Message;
+import com.lyd.mapper.MessageMapper;
+import com.lyd.service.MessageService;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
+import javax.annotation.Resource;
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
-@ServerEndpoint("/imserver/{userId}")
+@ServerEndpoint("/socket/{userId}")
 @CrossOrigin(origins ="*")
 @Api("WebSocket部分接口")
 public class WebSocketServer {
+
+    @Resource
+    private MessageMapper messageMapper;
+    @Autowired
+    private MessageService messageService;
 
     /**静态变量，用来记录当前在线连接数。应该把它设计成线程安全的。*/
     private static int onlineCount = 0;
@@ -29,11 +41,15 @@ public class WebSocketServer {
     private Session session;
     /**接收userId*/
     private String userId="";
+    private final String jsonFrom = "fromUserId";
+    private final String jsonTo = "toUserId";
+    private final String jsonMsg = "contentText";
 
     /**
      * 连接建立成功调用的方法*/
     @OnOpen
-    public void onOpen(Session session,@PathParam("userId") String userId) {
+    public void onOpen(Session session,@PathParam("userId") String userId,@PathParam("toId") String toId) {
+        log.info(toId);
         this.session = session;
         this.userId=userId;
         if(webSocketMap.containsKey(userId)){
@@ -51,6 +67,14 @@ public class WebSocketServer {
 
         try {
             sendMessage("连接成功");
+//            List<MsgVO> historyMsg = messageService.getHistoryMsg(Long.valueOf(userId), Long.valueOf(toId), 3);
+//            for (MsgVO msgVO : historyMsg) {
+//                JSONObject json = new JSONObject();
+//                json.put(jsonFrom,userId);
+//                json.put(jsonTo,userId);
+//                json.put(jsonMsg,msgVO.getMsg());
+//                sendMessage(json.toJSONString());
+//            }
         } catch (IOException e) {
             log.error("用户:"+userId+",网络异常!!!!!!");
         }
@@ -84,6 +108,8 @@ public class WebSocketServer {
                 //追加发送人(防止串改)
                 jsonObject.put("fromUserId",this.userId);
                 String toUserId=jsonObject.getString("toUserId");
+
+//                messageService.sendMsg(Long.valueOf(this.userId),Long.valueOf(toUserId),message,null);
                 //传送给对应toUserId用户的websocket
                 if(StringUtils.isNotBlank(toUserId)&&webSocketMap.containsKey(toUserId)){
                     webSocketMap.get(toUserId).sendMessage(jsonObject.toJSONString());

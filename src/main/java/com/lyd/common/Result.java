@@ -41,6 +41,14 @@ public class Result {
         return new Result(Constants.CODE_200,"",null,null);
     }
 
+    public static Result reportSuccess() {
+        return new Result(Constants.CODE_200,"您已成功举报",null,null);
+    }
+
+    public static Result banUserSuccess() {
+        return new Result(Constants.CODE_200,"您已成功封禁该用户",null,null);
+    }
+
     public static Result success(Object data){
         return new Result(Constants.CODE_200,"",data,null);
     }

@@ -42,11 +42,11 @@ public class MessageController {
 
     @ApiOperation("发送系统消息")
     @PostMapping("/sendSysMsg/{userId}/{msg}")
-    public Result sendSysMsg(@PathVariable Long userId, @PathVariable String msg) {
+    public Result sendSysMsg(@PathVariable Long userId, @PathVariable String msg,@RequestParam(required = false) String title) {
         if (userMapper.selectById(userId)==null) {
             return Result.error(Constants.CODE_400,"不存在该用户");
         }
-        messageService.sendMsg(SYSID,userId,msg);
+        messageService.sendMsg(SYSID,userId,msg,title);
         return Result.success();
     }
 
@@ -56,34 +56,27 @@ public class MessageController {
         if (userMapper.selectById(fromId)==null || userMapper.selectById(toId)==null) {
             return Result.error(Constants.CODE_400,"不存在该用户");
         }
-        messageService.sendMsg(fromId,toId,msg);
+        messageService.sendMsg(fromId,toId,msg,null);
         return Result.success();
     }
 
     @ApiOperation("获取系统消息")
-    @GetMapping("/getSysMsg/{userId}/{pageNum}/{pageSize}")
-    public Result getSysMsg(@PathVariable Long userId,@PathVariable Integer pageNum,@PathVariable Integer pageSize) {
-        if (pageNum<1) {
-            return Result.error(Constants.CODE_400,"从第一页开始");
-        }
+    @GetMapping("/getSysMsg/{userId}")
+    public Result getSysMsg(@PathVariable Long userId) {
         if (userMapper.selectById(userId)==null) {
             return Result.error(Constants.CODE_400,"不存在该用户");
         }
-        List<MsgVO> msg = messageService.getMsg(userId, SYSID, pageNum, pageSize);
+        List<MsgVO> msg = messageService.getMsg(userId, SYSID);
         return Result.success(msg,messageService.getMsgCount(userId, SYSID));
     }
 
     @ApiOperation("获取私聊消息")
-    @GetMapping("/getMsg/{fromId}/{toId}/{pageNum}/{pageSize}")
-    public Result getPrivateMsg(@PathVariable Long fromId,@PathVariable Long toId,
-                                @PathVariable Integer pageNum,@PathVariable Integer pageSize) {
-        if (pageNum<1) {
-            return Result.error(Constants.CODE_400,"从第一页开始");
-        }
+    @GetMapping("/getMsg/{fromId}/{toId}")
+    public Result getPrivateMsg(@PathVariable Long fromId,@PathVariable Long toId) {
         if (userMapper.selectById(fromId)==null || userMapper.selectById(toId)==null) {
             return Result.error(Constants.CODE_400,"不存在该用户");
         }
-        List<MsgVO> msg = messageService.getMsg(toId, fromId, pageNum, pageSize);
+        List<MsgVO> msg = messageService.getMsg(toId, fromId);
         return Result.success(msg,messageService.getMsgCount(toId,fromId));
     }
 

@@ -65,6 +65,8 @@ public class UserController {
     private DocumentService documentService;
     @Autowired
     private BCryptPasswordEncoder encoder;
+    @Resource
+    private VideoMapper videoMapper;
 
     @ApiOperation("注册")
     @PostMapping("/register")
@@ -134,27 +136,7 @@ public class UserController {
         return Result.success();
     }
 
-    @ApiOperation("封禁用户(及用户发布有关资料)")
-    @DeleteMapping("/ban/{userId}")
-    public Result banUser(@PathVariable Long userId) {
-        log.info("访问了/ban/{}接口",userId);
-        if (userMapper.selectById(userId)==null) {
-            return Result.error(Constants.CODE_400,"不存在该用户");
-        }
-        userService.delReport(userId,(short)1);
-        userService.banUser(userId);
-        return Result.success();
-    }
 
-    @ApiOperation("解封用户")
-    @GetMapping("/unban/{userId}")
-    public Result unbanUser(@PathVariable Long userId) {
-        if (userMapper.selectById(userId)==null) {
-            return Result.error(Constants.CODE_400,"不存在该用户");
-        }
-        userService.unbanUser(userId);
-        return Result.success();
-    }
 
 
 
@@ -264,7 +246,7 @@ public class UserController {
         }
         List<MyJoin> myJoinById = userService.getMyJoinById(userId, pageNum, pageSize);
 
-        return Result.success(myJoinById);
+        return Result.success(myJoinById,userService.myJoinNum(userId));
     }
 
     @ApiOperation("历史记录 (sort:1帖子|2资料)")
@@ -309,49 +291,22 @@ public class UserController {
         return Result.success();
     }
 
-    @ApiOperation("停止专注")
-    @GetMapping("/focus/off/{todoId}/{time}")
-    public Result focusOff(@PathVariable Long todoId,@PathVariable Integer time) {
-        log.info("访问了/user/focus/off/{}/{}",todoId,time);
-        if (todoMapper.selectById(todoId)==null) {
-            return Result.error(Constants.CODE_400,"不存在该帖子");
-        }
-        userService.stopFocus(todoId,time);
-        return Result.success();
-    }
 
-    @ApiOperation("获取专注列表(sort:1本周|2本月)")
-    @GetMapping("/focus/{sort}/{userId}/{pageNum}/{pageSize}")
-    public Result focusList(@PathVariable Long userId,@PathVariable Short sort,@PathVariable Integer pageNum,@PathVariable Integer pageSize) {
-        log.info("访问了/user/focus/{}/{}/{}/{}",sort,userId,pageNum,pageSize);
-        if (userMapper.selectById(userId)==null) {
-            return Result.error(Constants.CODE_400,"不存在该用户");
-        }
-        if (sort!=1 && sort!=2) {
-            return Result.error(Constants.CODE_400,"参数错误");
-        }
-        if (pageNum<1) {
-            return Result.error(Constants.CODE_400,"从第一页开始");
-        }
-        List<TodoVO> todoVOS = userService.getFocus(userId, sort, pageNum, pageSize);
-        return Result.success(todoVOS,userService.getFocusCount(userId,sort));
-    }
-
-    @ApiOperation("获取收藏(sort:0帖子|1回复|2文档)")
+    @ApiOperation("获取收藏(sort:1帖子|2回答|3资料)")
     @GetMapping("/collection/{sort}/{userId}/{pageNum}/{pageSize}")
     public Result getCollection(@PathVariable Short sort,@PathVariable Long userId,@PathVariable Integer pageNum,@PathVariable Integer pageSize) {
         log.info("访问了/user/collection/{}/{}/{}/{}",sort,userId,pageNum,pageSize);
         if (userMapper.selectById(userId)==null) {
             return Result.error(Constants.CODE_400,"不存在该用户");
         }
-        if (sort!=0 && sort!=1 && sort!=2) {
-            return Result.error(Constants.CODE_400,"sort:0帖子|1回复|2文档");
+        if (sort!=1 && sort!=2 && sort!=3) {
+            return Result.error(Constants.CODE_400,"sort:1帖子|2回答|3资料");
         }
         if (pageNum<1) {
             return Result.error(Constants.CODE_400,"从第一页开始");
         }
         List<CollectionVO> myCollection = userService.getMyCollection(userId, sort, pageNum, pageSize);
-        return Result.success(myCollection);
+        return Result.success(myCollection, userService.getUserCollectionNum(userId,sort));
     }
 
     @ApiOperation("给帖子的回答点赞")
@@ -368,15 +323,15 @@ public class UserController {
         return Result.success();
     }
 
-    @ApiOperation("收藏 (sort:1帖子|2回答|3文档)")
+    @ApiOperation("收藏 (sort:1帖子|2回答|3文档|4视频)")
     @GetMapping("/collect/post/{sort}/{userId}/{targetId}")
     public Result collectPost(@PathVariable Long userId,@PathVariable Long targetId,@PathVariable Short sort) {
         log.info("访问了/#/collect/post/{}/{}/{}",sort,userId,targetId);
         if (userMapper.selectById(userId)==null) {
             return Result.error(Constants.CODE_400,"不存在该用户");
         }
-        if (sort!=1 && sort!=2 && sort!=3) {
-            return Result.error(Constants.CODE_400,"sort:1帖子|2回答|3文档");
+        if (sort!=1 && sort!=2 && sort!=3 && sort!=4) {
+            return Result.error(Constants.CODE_400,"sort:1帖子|2回答|3文档|4视频");
         }
         if (sort==1 && postsMapper.selectById(targetId)==null) {
             return Result.error(Constants.CODE_400,"不存在该帖子");
@@ -387,19 +342,22 @@ public class UserController {
         if (sort==3 && documentMapper.selectById(targetId)==null) {
             return Result.error(Constants.CODE_400,"不存在该文档");
         }
+        if (sort==3 && videoMapper.selectById(targetId)==null) {
+            return Result.error(Constants.CODE_400,"不存在该视频");
+        }
         userService.collect(userId,targetId,sort);
         return Result.success();
     }
 
-    @ApiOperation("取消收藏 (sort:1帖子|2回答|3文档)")
+    @ApiOperation("取消收藏 (sort:1帖子|2回答|3文档|4视频)")
     @GetMapping("/unCollect/post/{sort}/{userId}/{targetId}")
     public Result unCollectPost(@PathVariable Long userId,@PathVariable Long targetId,@PathVariable Short sort) {
         log.info("访问了/#/unCollect/post/{}/{}/{}",sort,userId,targetId);
         if (userMapper.selectById(userId)==null) {
             return Result.error(Constants.CODE_400,"不存在该用户");
         }
-        if (sort!=1 && sort!=2 && sort!=3) {
-            return Result.error(Constants.CODE_400,"sort:1帖子|2回答|3文档");
+        if (sort!=1 && sort!=2 && sort!=3 && sort!=4) {
+            return Result.error(Constants.CODE_400,"sort:1帖子|2回答|3文档|4视频");
         }
         if (sort==1 && postsMapper.selectById(targetId)==null) {
             return Result.error(Constants.CODE_400,"不存在该帖子");
@@ -410,29 +368,15 @@ public class UserController {
         if (sort==3 && documentMapper.selectById(targetId)==null) {
             return Result.error(Constants.CODE_400,"不存在该文档");
         }
+        if (sort==4 && videoMapper.selectById(targetId)==null) {
+            return Result.error(Constants.CODE_400,"不存在该视频");
+        }
         userService.unCollect(userId,targetId,sort);
         return Result.success();
     }
 
-    @ApiOperation("举报(sort:1用户|2帖子|3回答|4评论)")
-    @PostMapping("/report/{sort}/{userId}/{targetId}")
-    public Result report(@PathVariable Short sort,@PathVariable Long userId,@PathVariable Long targetId,@RequestParam(required = false) String reason) {
-        if (sort!=1 && sort!=2 && sort!=3 && sort!=4) {
-            return Result.error(Constants.CODE_400,"sort:sort:1用户|2帖子|3回答|4评论");
-        }
-        userService.addReport(userId,targetId,sort,reason);
-        return Result.success();
-    }
 
-    @ApiOperation("被举报名单")
-    @GetMapping("/reported/{pageNum}/{pageSize}")
-    public Result getReported(@PathVariable Integer pageNum,@PathVariable Integer pageSize) {
-        if (pageNum<1) {
-            return Result.error(Constants.CODE_400,"应从第一页开始");
-        }
-        List<ReportVO> reported = userService.getReported(pageNum, pageSize);
-        return Result.success(reported, userService.getReportedNum());
-    }
+
 
 
 

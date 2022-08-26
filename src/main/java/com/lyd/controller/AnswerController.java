@@ -13,13 +13,10 @@ import com.lyd.service.UserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.python.antlr.ast.Return;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreFilter;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
-import javax.annotation.security.PermitAll;
 import java.util.List;
 
 /**
@@ -79,22 +76,6 @@ public class AnswerController {
         }
         CommentsVO commentsVO = commentsService.updComment(id, content);
         return Result.success(commentsVO);
-    }
-
-    @ApiOperation("封禁回答")
-    @DeleteMapping("/ban/{pcId}")
-    public Result banPc(@PathVariable Long pcId) {
-        userService.delReport(pcId,(short)3);
-
-        commentsService.delPostComments(pcId);
-        return Result.success();
-    }
-
-    @ApiOperation("取消封禁回答")
-    @GetMapping("/unban/{pcId}")
-    public Result unbanPc(@PathVariable Long pcId) {
-        commentsService.releasePc(pcId);
-        return Result.success();
     }
 
     @ApiOperation("删除某回答")

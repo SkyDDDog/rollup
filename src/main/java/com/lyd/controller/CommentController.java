@@ -83,22 +83,6 @@ public class CommentController {
         return Result.success(ccvo);
     }
 
-    @ApiOperation("封禁某条评论")
-    @DeleteMapping("/ban/{id}")
-    public Result banCc(@PathVariable Long id) {
-        log.info("访问了/comment/ban/"+id+"接口");
-        userService.delReport(id,(short)4);
-        commentsService.delCComments(id);
-        return Result.success();
-    }
-
-    @ApiOperation("取消封禁某条评论")
-    @GetMapping("/unban/{id}")
-    public Result unbanCc(@PathVariable Long id) {
-        commentsService.releaseCc(id);
-        return Result.success();
-    }
-
     @ApiOperation("回答帖子")
     @PostMapping("/{postId}/{userId}/{content}")
     public Result commentPost(@PathVariable Long postId,@PathVariable Long userId,@PathVariable String content) {

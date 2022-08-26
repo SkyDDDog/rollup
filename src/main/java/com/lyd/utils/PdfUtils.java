@@ -12,7 +12,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
-import org.python.bouncycastle.util.test.Test;
+import org.bouncycastle.util.test.Test;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -57,7 +57,6 @@ public class PdfUtils {
             // 新建一个空白pdf文档
             file = new File(outPath);
             os = new FileOutputStream(file);
-            // Address是将要被转化的word文档
             Document doc = new Document(inPath);
             // 全面支持DOC, DOCX, OOXML, RTF HTML, OpenDocument, PDF,
             doc.save(os, com.aspose.words.SaveFormat.PDF);

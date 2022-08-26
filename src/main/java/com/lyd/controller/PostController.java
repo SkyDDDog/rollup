@@ -44,21 +44,6 @@ public class PostController {
         return Result.success();
     }
 
-    @ApiOperation("封禁帖子")
-    @DeleteMapping("/ban/{postId}")
-    public Result banPost(@PathVariable Long postId) {
-        userService.delReport(postId,(short)2);
-        postsService.delPost(postId);
-        return Result.success();
-    }
-
-    @ApiOperation("解封帖子")
-    @GetMapping("/unban/{postId}")
-    public Result unbanPost(@PathVariable Long postId) {
-        postsService.releasePost(postId);
-        return Result.success();
-    }
-
 
     @ApiOperation("分页查询所有(按讨论数倒序)")
     @GetMapping("/all/{pageNum}/{pageSize}")
@@ -102,8 +87,20 @@ public class PostController {
         if (pageNum < 1) {
             return Result.error(Constants.CODE_400,"从第1页开始");
         }
-        List<PrePostVO> recommend = postsService.getBySort(userId,sort,pageNum, pageSize);
-        return Result.success(recommend,postsService.getCount());
+        List<PrePostVO> res = null;
+        if (sort==1) {
+            try {
+                res = postsService.getRecByUrl(userId,pageNum,pageSize);
+                return Result.success(res,6L);
+            } catch (Exception e) {
+                log.info("py服务超时，调用本地服务");
+                res = postsService.getBySort(userId,sort,pageNum, pageSize);
+                return Result.success(res,postsService.getCount());
+            }
+        } else {
+            res = postsService.getBySort(userId,sort,pageNum, pageSize);
+            return Result.success(res,postsService.getCount());
+        }
     }
 
 
@@ -123,21 +120,22 @@ public class PostController {
     @ApiOperation("搜索(sort:1帖子|2资料|3视频)")
     @GetMapping("/search/{sort}/{pageNum}/{pageSize}/{content}")
     public Result search(@PathVariable String content,
+                         @RequestParam(required = false) Long userId,
                          @PathVariable @ApiParam(value = "1帖子/2资料",defaultValue = "1") Short sort,
                          @PathVariable Integer pageNum, @PathVariable Integer pageSize) {
         log.info("访问了/posts/search/"+sort+"/"+pageNum+"/"+pageSize+"接口");
         log.info("查询了"+content);
-        List<PostVO> searchPost;
+        List<PrePostVO> searchPost;
         List<DocVO> searchDoc;
         List<VideoVO> searchVideo;
         if (pageNum<1) {
             return Result.error(Constants.CODE_400,"应从第1页开始查询");
         }
         if (sort==1) {
-            searchPost = postsService.search(content, pageNum, pageSize);
+            searchPost = postsService.search(content, userId, pageNum, pageSize);
             return Result.success(searchPost, postsService.getSearchCount(content));
         } else if (sort==2) {
-            searchDoc = documentService.search(content,pageNum,pageSize);
+            searchDoc = documentService.search(content,userId,pageNum,pageSize);
             return Result.success(searchDoc,documentService.getSearchCount(content));
         } else if (sort==3) {
             searchVideo = videoService.search(content,pageNum,pageSize);

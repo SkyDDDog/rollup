@@ -42,7 +42,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
 
         //根据用户名查询用户权限
-        //TODO
 //        User user =
 //        String perm = user.getPerm();
 //        List<GrantedAuthority> grantedAuthorities = new ArrayList<>();

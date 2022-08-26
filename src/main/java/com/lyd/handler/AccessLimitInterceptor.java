@@ -44,7 +44,6 @@ public class AccessLimitInterceptor implements HandlerInterceptor {
             //如果需要登录
             if(login){
                 //获取登录的session进行判断
-                //TODO
                 key+=""+"1"; //用户id userId
             }
 

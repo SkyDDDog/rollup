@@ -9,8 +9,11 @@ import lombok.Data;
 public class CollectionVO {
 
     private String id;
+    private String targetId;
     private String title;
+    private String content;
     private String sort;
     private String date;
+    private String discussNum;
 
 }

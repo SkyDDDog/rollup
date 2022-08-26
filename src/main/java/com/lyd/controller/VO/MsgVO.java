@@ -11,6 +11,7 @@ public class MsgVO {
     private String toId;
     private String toHead;
     private String toName;
+    private String title;
     private String msg;
     private String date;
 

@@ -9,6 +9,7 @@ import lombok.Data;
 public class HistoryVO {
 
     private String historyId;
+    private String targetId;
     private String title;
     private String sort;
     private String date;

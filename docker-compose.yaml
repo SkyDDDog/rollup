@@ -33,7 +33,7 @@ services:
     restart: always
   rollup_springboot:
     build:
-      context: .
+      context: Java/
       dockerfile: Dockerfile
     environment:
       TZ: Asia/Shanghai
@@ -46,4 +46,15 @@ services:
     depends_on:
       - redis
       - mysql
+    restart: always
+  rollup_web:
+    build:
+      context: Web/
+      dockerfile: Dockerfile
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "9092:80"
+    depends_on:
+      - rollup_springboot
     restart: always

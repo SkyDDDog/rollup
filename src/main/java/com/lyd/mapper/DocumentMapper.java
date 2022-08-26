@@ -13,6 +13,9 @@ import org.apache.ibatis.annotations.Update;
 public interface DocumentMapper extends BaseMapper<Document> {
 
     @Update("UPDATE `document` SET is_deleted=0 WHERE publisher_id = #{userId}")
-    public void unbanDoc(Long userId);
+    public void unbanDocByUser(Long userId);
+
+    @Update("UPDATE `document` SET is_deleted=0 WHERE id = #{id}")
+    public void unbanDocById(Long id);
 
 }

@@ -8,6 +8,7 @@ import com.lyd.entity.User;
 import com.lyd.mapper.TodoMapper;
 import com.lyd.mapper.UserMapper;
 import com.lyd.service.TodoService;
+import com.lyd.service.UserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,8 @@ public class TodoController {
 
     @Autowired
     private TodoService todoService;
+    @Autowired
+    private UserService userService;
     @Resource
     private TodoMapper todoMapper;
     @Resource
@@ -81,6 +84,9 @@ public class TodoController {
         if (userMapper.selectById(userId)==null) {
             return Result.error(Constants.CODE_400,"该用户不存在");
         }
+        if (!todoService.getByName(content).isEmpty()) {
+            return Result.error(Constants.CODE_400,"该todo已存在");
+        }
         todoService.addTodo(userId,content);
         return Result.success();
     }
@@ -105,6 +111,31 @@ public class TodoController {
         }
         todoService.updTodo(id,content);
         return Result.success();
+    }
+
+    @ApiOperation("停止专注")
+    @GetMapping("/focus/off/{todoId}/{time}")
+    public Result focusOff(@PathVariable Long todoId,@PathVariable Integer time) {
+        log.info("访问了/user/focus/off/{}/{}",todoId,time);
+        if (todoMapper.selectById(todoId)==null) {
+            return Result.error(Constants.CODE_400,"不存在该帖子");
+        }
+        todoService.stopFocus(todoId,time);
+        return Result.success();
+    }
+
+    @ApiOperation("获取专注列表(sort:1本周|2本月)")
+    @GetMapping("/focus/{sort}/{userId}")
+    public Result focusList(@PathVariable Long userId,@PathVariable Short sort) {
+        log.info("访问了/user/focus/{}/{}",sort,userId);
+        if (userMapper.selectById(userId)==null) {
+            return Result.error(Constants.CODE_400,"不存在该用户");
+        }
+        if (sort!=1 && sort!=2) {
+            return Result.error(Constants.CODE_400,"参数错误");
+        }
+        List<TodoVO> todoVOS = todoService.getFocus(userId, sort);
+        return Result.success(todoVOS,todoService.getFocusCount(userId,sort));
     }
 
 

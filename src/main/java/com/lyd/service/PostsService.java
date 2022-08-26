@@ -6,6 +6,8 @@ import com.lyd.controller.VO.PostVO;
 import com.lyd.controller.VO.PrePostVO;
 import com.lyd.entity.*;
 import com.lyd.mapper.*;
+import com.lyd.utils.RequestUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +20,7 @@ import java.util.List;
  * @author 天狗
  * @date 2022/7/20
  */
+@Slf4j
 @Service
 public class PostsService {
 
@@ -35,6 +38,95 @@ public class PostsService {
     private UserService userService;
     @Resource
     private UserInfoMapper userInfoMapper;
+
+    /**
+     * @desc    post转VO
+     * @param src
+     * @return
+     */
+    public List<PostVO> post2Vo(List<Posts> src) {
+        ArrayList<PostVO> res = new ArrayList<>();
+        int i = 1;
+        for (Posts post : src) {
+            PostVO postVO = new PostVO();
+            postVO.setRank(i);
+            i++;
+            postVO.setPostId(post.getId().toString());
+            postVO.setTitle(post.getTitle());
+            postVO.setContent(post.getContent());
+            postVO.setUserId(post.getUser_id().toString());
+            UserInfo userInfo = userInfoMapper.selectById(post.getUser_id());
+            if (userInfo!=null) {
+                postVO.setUserName(userInfo.getNickname());
+                postVO.setUserHead(userInfo.getHead());
+            } else {
+                postVO.setUserName("该用户已被封禁");
+            }
+
+            postVO.setDiscussNum(post.getDiscuss_num().toString());
+
+            res.add(postVO);
+        }
+        return res;
+    }
+
+    /**
+     * @desc    post转preVO
+     * @param src
+     * @param userId    用户id
+     * @return
+     */
+    public List<PrePostVO> post2PreVo(List<Posts> src,Long userId) {
+        ArrayList<PrePostVO> res = new ArrayList<>();
+        int i = 1;
+        for (Posts post : src) {
+            PrePostVO postVO = new PrePostVO();
+            postVO.setRank(i);
+            i++;
+            postVO.setPostId(post.getId().toString());
+            postVO.setTitle(post.getTitle());
+            postVO.setContent(post.getContent());
+            postVO.setUserId(post.getUser_id().toString());
+            postVO.setCollectNum(userService.getCollectNum(post.getId(),(short)1).toString());
+            UserInfo userInfo = userInfoMapper.selectById(post.getUser_id());
+            if (userInfo!=null) {
+                postVO.setUserName(userInfo.getNickname());
+                postVO.setUserHead(userInfo.getHead());
+            } else {
+                postVO.setUserName("该用户已被封禁");
+            }
+            postVO.setDiscussNum(post.getDiscuss_num().toString());
+            CommentsVO answer = commentsService.getBestCommentByPostId(post.getId());
+            if (answer!=null) {
+                postVO.setBestAnswer(answer.getContent());
+                postVO.setBestAnswerId(answer.getCommentId());
+                postVO.setLikes(answer.getLikes());
+                if (userId!=null) {
+                    postVO.setBestAnswerIsLiked(userService.isLike(userId, Long.valueOf(answer.getCommentId())));
+                }
+            } else {
+                postVO.setBestAnswer("暂时没有回答");
+                postVO.setLikes(0);
+                postVO.setBestAnswerIsLiked(false);
+            }
+            QueryWrapper<UserCollection> collectionWrapper = new QueryWrapper<>();
+            collectionWrapper.eq("sort",1);
+            collectionWrapper.eq("target_id",post.getId());
+            if (userId!=null) {
+                collectionWrapper.eq("user_id",userId);
+                List<UserCollection> userCollections = userCollectionMapper.selectList(collectionWrapper);
+                postVO.setIsCollected(!userCollections.isEmpty());
+            } else {
+                postVO.setBestAnswerIsLiked(null);
+            }
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            String format = sdf.format(post.getGmt_modified());
+            postVO.setDate(format);
+            res.add(postVO);
+        }
+        return res;
+    }
+
 
     /**
      * @desc 发布帖子
@@ -92,18 +184,7 @@ public class PostsService {
         wrapper.orderByDesc("discuss_num");
         wrapper.last(" limit " + (pageNum-1)*pageSize + "," + pageSize);
         List<Posts> posts = postsMapper.selectList(wrapper);
-        ArrayList<PostVO> res = new ArrayList<>();
-        for (Posts post : posts) {
-            PostVO postVO = new PostVO();
-            postVO.setPostId(post.getId().toString());
-            postVO.setTitle(post.getTitle());
-            postVO.setContent(post.getContent());
-            postVO.setUserId(post.getUser_id().toString());
-            postVO.setDiscussNum(post.getDiscuss_num().toString());
-
-            res.add(postVO);
-        }
-        return res;
+        return post2Vo(posts);
     }
 
     /**
@@ -116,21 +197,7 @@ public class PostsService {
         wrapper.orderByDesc("gmt_modified");
         wrapper.last(" limit 5");
         List<Posts> posts = postsMapper.selectList(wrapper);
-        ArrayList<PostVO> res = new ArrayList<>();
-        int i = 1;
-        for (Posts post : posts) {
-            PostVO postVO = new PostVO();
-            postVO.setRank(i);
-            i++;
-            postVO.setPostId(post.getId().toString());
-            postVO.setTitle(post.getTitle());
-            postVO.setContent(post.getContent());
-            postVO.setUserId(post.getUser_id().toString());
-            postVO.setDiscussNum(post.getDiscuss_num().toString());
-
-            res.add(postVO);
-        }
-        return res;
+        return post2Vo(posts);
     }
 
     /**
@@ -154,39 +221,7 @@ public class PostsService {
         wrapper.orderByDesc("gmt_modified");
         wrapper.last(" limit "+(pageNum-1)*pageSize+","+pageSize);
         List<Posts> posts = postsMapper.selectList(wrapper);
-        ArrayList<PrePostVO> res = new ArrayList<>();
-        int i = 1;
-        for (Posts post : posts) {
-            PrePostVO postVO = new PrePostVO();
-            postVO.setRank(i);
-            i++;
-            postVO.setPostId(post.getId().toString());
-            postVO.setTitle(post.getTitle());
-            postVO.setContent(post.getContent());
-            postVO.setUserId(post.getUser_id().toString());
-            postVO.setDiscussNum(post.getDiscuss_num());
-            CommentsVO answer = commentsService.getBestCommentByPostId(post.getId());
-            if (answer!=null) {
-                postVO.setBestAnswer(answer.getContent());
-                postVO.setBestAnswerId(answer.getCommentId());
-                postVO.setLikes(answer.getLikes());
-
-                if (userId!=null) {
-                    postVO.setBestAnswerIsLiked(userService.isLike(userId, Long.valueOf(answer.getCommentId())));
-                }
-            }
-            QueryWrapper<UserCollection> collectionWrapper = new QueryWrapper<>();
-            collectionWrapper.eq("sort",0);
-            collectionWrapper.eq("target_id",post.getId());
-            if (userId!=null) {
-                collectionWrapper.eq("user_id",userId);
-                List<UserCollection> userCollections = userCollectionMapper.selectList(collectionWrapper);
-                postVO.setIsCollected(!userCollections.isEmpty());
-            }
-
-            res.add(postVO);
-        }
-        return res;
+        return post2PreVo(posts,userId);
     }
 
 
@@ -214,19 +249,17 @@ public class PostsService {
         postVO.setDiscussNum(post.getDiscuss_num().toString());
 
         UserInfo userInfo = userInfoMapper.selectById(post.getUser_id());
-        postVO.setUserHead(userInfo.getHead());
-        postVO.setUserName(userInfo.getNickname());
-
-        QueryWrapper<UserCollection> collectionWrapper = new QueryWrapper<>();
-        collectionWrapper.eq("sort",0);
-        collectionWrapper.eq("target_id",post.getId());
-        if (userId!=null) {
-            collectionWrapper.eq("user_id",userId);
-            List<UserCollection> userCollections = userCollectionMapper.selectList(collectionWrapper);
-            postVO.setIsCollected(!userCollections.isEmpty());
+        if (userInfo!=null) {
+            postVO.setUserName(userInfo.getNickname());
+            postVO.setUserHead(userInfo.getHead());
+        } else {
+            postVO.setUserName("该用户已被封禁");
         }
-        String collectNum = userCollectionMapper.selectCount(collectionWrapper).toString();
-        postVO.setCollectNum(collectNum);
+
+        postVO.setIsCollected(userService.isCollected(userId,postId,(short)1));
+
+        postVO.setCollectNum(userService.getCollectNum(postId,(short)1).toString());
+
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         String format = sdf.format(post.getGmt_modified());
         postVO.setDate(format);
@@ -241,30 +274,83 @@ public class PostsService {
      * @param pageSize  分页参数
      * @return
      */
-    public List<PostVO> search(String content,Integer pageNum,Integer pageSize) {
+    public List<PrePostVO> search(String content,Long userId,Integer pageNum,Integer pageSize) {
         QueryWrapper<Posts> wrapper = new QueryWrapper<>();
-        wrapper.like("content",content);
+        wrapper.like("title",content);
         wrapper.orderByDesc("discuss_num");
         wrapper.last(" limit "+ (pageNum-1)*pageSize +","+pageSize);
         List<Posts> posts = postsMapper.selectList(wrapper);
-        ArrayList<PostVO> res = new ArrayList<>();
-        for (Posts post : posts) {
-            PostVO postVO = new PostVO();
-            postVO.setPostId(post.getId().toString());
+        ArrayList<PrePostVO> res = new ArrayList<>();
+        return post2PreVo(posts,userId);
+    }
+
+    /**
+     * @desc    获取模糊查询结果个数
+     * @param content   模糊查询词
+     * @return
+     */
+    public Long getSearchCount(String content) {
+        QueryWrapper<Posts> wrapper = new QueryWrapper<>();
+        wrapper.like("title",content);
+        return postsMapper.selectCount(wrapper);
+
+    }
+
+    /**
+     * @desc    通过py接口查询推荐帖子
+     * @param userId    用户id
+     * @param pageNum   第?页
+     * @param pageSize  一页?条
+     * @return
+     * @throws Exception
+     */
+    public List<PrePostVO> getRecByUrl(Long userId,Integer pageNum,Integer pageSize) throws Exception {
+        ArrayList<PrePostVO> res = null;
+        List<String> ids = RequestUtil.getRecIdsByRequestUrl(userId);
+        log.info(ids.toString());
+        res = new ArrayList<>();
+//            int i = 1;
+        for (int i = (pageNum-1)*pageSize+1; i<= ids.size() && i <= pageNum*pageSize; i++) {
+            String id = ids.get(i-1);
+            PrePostVO postVO = new PrePostVO();
+            postVO.setPostId(id);
+            Posts post = postsMapper.selectById(id);
             postVO.setTitle(post.getTitle());
             postVO.setContent(post.getContent());
             postVO.setUserId(post.getUser_id().toString());
+            postVO.setCollectNum(userService.getCollectNum(Long.valueOf(id),(short)1).toString());
+            UserInfo userInfo = userInfoMapper.selectById(post.getUser_id());
+            if (userInfo!=null) {
+                postVO.setUserName(userInfo.getNickname());
+                postVO.setUserHead(userInfo.getHead());
+            } else {
+                postVO.setUserName("该用户已被封禁");
+            }
+            postVO.setDiscussNum(post.getDiscuss_num().toString());
+            CommentsVO answer = commentsService.getBestCommentByPostId(post.getId());
+            if (answer!=null) {
+                postVO.setBestAnswer(answer.getContent());
+                postVO.setBestAnswerId(answer.getCommentId());
+                postVO.setLikes(answer.getLikes());
 
+                if (userId!=null) {
+                    postVO.setBestAnswerIsLiked(userService.isLike(userId, Long.valueOf(answer.getCommentId())));
+                }
+            }
+            QueryWrapper<UserCollection> collectionWrapper = new QueryWrapper<>();
+            collectionWrapper.eq("sort",0);
+            collectionWrapper.eq("target_id",post.getId());
+            if (userId!=null) {
+                collectionWrapper.eq("user_id",userId);
+                List<UserCollection> userCollections = userCollectionMapper.selectList(collectionWrapper);
+                postVO.setIsCollected(!userCollections.isEmpty());
+            }
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            String format = sdf.format(post.getGmt_modified());
+            postVO.setDate(format);
             res.add(postVO);
         }
         return res;
-    }
-
-    public Long getSearchCount(String content) {
-        QueryWrapper<Posts> wrapper = new QueryWrapper<>();
-        wrapper.like("content",content);
-        return postsMapper.selectCount(wrapper);
-
     }
 
 

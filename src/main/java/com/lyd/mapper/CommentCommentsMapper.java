@@ -12,7 +12,7 @@ import org.apache.ibatis.annotations.Update;
 @Mapper
 public interface CommentCommentsMapper extends BaseMapper<CommentComments> {
 
-    @Update("UPDATE `comment_comments` SET is_deleted=0 WHERE user_id = #{userId}")
+    @Update("UPDATE `comment_comments` SET is_deleted=0 WHERE from_id = #{userId}")
     public void unbanCcByUser(Long userId);
 
     @Update("UPDATE `comment_comments` SET is_deleted=0 WHERE id = #{id}")

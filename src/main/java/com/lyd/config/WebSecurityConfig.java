@@ -85,10 +85,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     JwtAuthenticationTokenFilter jwtAuthenticationTokenFilter;
 
 
-    //TODO
-    // 记得改配置
-    //         临时放行所有接口
-    //         开发时临时放行
     @Override
     public void configure(WebSecurity web) throws Exception {
         web.ignoring().antMatchers("/**");

@@ -3,18 +3,18 @@ package com.lyd.controller.VO;
 import lombok.Data;
 
 @Data
-public class PrePostVO {
+public class PrePostVO extends PostVO {
 
-    private Integer rank;
-    private String postId;
-    private String title;
-    private String content;
-    private String userId;
-    private Integer discussNum;
+//    private Integer rank;
+//    private String postId;
+//    private String title;
+//    private String content;
+//    private String userId;
+//    private Integer discussNum;
     private String bestAnswer;
     private String bestAnswerId;
     private Integer likes;
     private Boolean bestAnswerIsLiked;
-    private Boolean isCollected;
+//    private Boolean isCollected;
 
 }

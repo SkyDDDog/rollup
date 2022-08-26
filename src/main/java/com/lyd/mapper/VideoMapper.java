@@ -9,6 +9,9 @@ import org.apache.ibatis.annotations.Update;
 public interface VideoMapper extends BaseMapper<Video> {
 
     @Update("UPDATE `video` SET is_deleted=0 WHERE user_id = #{userId}")
-    public void unbanVideo(Long userId);
+    public void unbanVideoByUser(Long userId);
+
+    @Update("UPDATE `video` SET is_deleted=0 WHERE id = #{id}")
+    public void unbanVideoById(Long id);
 
 }

@@ -1,20 +1,22 @@
 package com.lyd;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.aliyun.oss.OSSClient;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.lyd.config.OssPath;
+import com.lyd.controller.VO.BanUserVO;
 import com.lyd.controller.VO.CommentsVO;
 import com.lyd.controller.VO.MyPost;
+import com.lyd.controller.VO.PrePostVO;
 import com.lyd.entity.*;
 import com.lyd.mapper.DocumentMapper;
 import com.lyd.mapper.PostsMapper;
 import com.lyd.mapper.UserInfoMapper;
 import com.lyd.mapper.UserMapper;
-import com.lyd.service.CommentsService;
-import com.lyd.service.PostsService;
-import com.lyd.service.UploadService;
-import com.lyd.service.VideoService;
+import com.lyd.service.*;
 import com.lyd.utils.ExcelUtil;
 import com.lyd.utils.FileUtils;
 import com.lyd.utils.OssUtils;
@@ -23,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.junit.jupiter.api.Test;
-import org.python.util.PythonInterpreter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,13 +34,17 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Random;
+import java.util.Scanner;
 
 @Slf4j
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 class DemoApplicationTests {
 
     @Autowired
@@ -73,35 +78,13 @@ class DemoApplicationTests {
 
     @Autowired
     VideoService videoService;
+    @Autowired
+    UserService userService;
 
     @Test
     void contextLoads() {
 //        System.out.println(encoder.encode("123456"));
         System.out.println(expirationSeconds);
-    }
-    @Test
-    void pyTest1() {
-        PythonInterpreter interpreter = new PythonInterpreter();
-        interpreter.exec("print 'hello world';");
-    }
-    @Test
-    void pyTest2() {
-        try {
-            String[] arg = new String[] { "python", "C:\\Users\\天狗\\Desktop\\test.py", "123","456" };
-
-            Process proc = Runtime.getRuntime().exec(arg);
-            InputStreamReader reader = new InputStreamReader(proc.getInputStream(),"GBK");
-            BufferedReader in = new BufferedReader(reader);
-            String line = null;
-            while ((line = in.readLine()) != null) {
-                System.out.println(line);
-            }
-            in.close();
-            reader.close();
-            proc.waitFor();
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 
     @Test
@@ -413,8 +396,131 @@ class DemoApplicationTests {
 
     @Test
     void testSql() {
-        List<MyPost> myPost = userMapper.getMyPost(1550319589076406273L, 1, 5);
-        log.info(myPost.toString());
+        List<BanUserVO> banUserList = userService.getBanUserList(1, 5);
+        log.info(banUserList.toString());
+
     }
+
+    @Test
+    void testDate() {
+        LocalDate localDate = LocalDate.now();
+        LocalDate startTime = localDate.with(TemporalAdjusters.firstDayOfMonth());
+        LocalDate endTime = localDate.with(TemporalAdjusters.lastDayOfMonth());
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        log.info(df.format(startTime)+" 00:00:00");
+        log.info(df.format(endTime)+" 23:59:59");
+    }
+
+    @Test
+    void testHttpRequest() throws Exception {
+        // 定义请求路径
+        String requertUrl = "http://1.12.66.67:9091/posts/1/1/10";
+        String userId = "1550319589076406273";
+        String para = "?userId=" + URLEncoder.encode(userId, "UTF-8");
+        requertUrl += para;
+        // 创建连接并设置参数
+        URL url = new URL(requertUrl);
+        HttpURLConnection httpCoon = (HttpURLConnection) url.openConnection();
+        httpCoon.setRequestMethod("GET");
+        httpCoon.setRequestProperty("Charset","UTF-8");
+//        httpCoon.setRequestProperty("Content-Type","application/json");
+//        // 打开流
+//        httpCoon.setDoOutput(true);
+//        httpCoon.setDoInput(true);
+
+//        // 获取输入流和写数据
+//        OutputStream os = httpCoon.getOutputStream();
+//        os.write(json.getBytes());
+//        os.flush();
+
+//         发起http请求 (getInputStream触发http请求)
+        if (httpCoon.getResponseCode() != 200) {
+            throw new Exception("调用请求异常,状态码:"+httpCoon.getResponseCode());
+        }
+
+        // 获取输入流和读数据
+        BufferedReader br = new BufferedReader(new InputStreamReader(httpCoon.getInputStream()));
+        String resultData = br.readLine();
+//        log.info(resultData);
+        JSONObject jsonObject = JSON.parseObject(resultData);
+        String code = (String) jsonObject.get("code");
+        String msg = (String) jsonObject.get("msg");
+        JSONArray data = jsonObject.getJSONArray("data");
+        log.info(code);
+        log.info(msg);
+        for (int i = 0; i < data.size(); i++) {
+            JSONObject object = data.getJSONObject(i);
+            PrePostVO prePostVO = JSON.toJavaObject(object, PrePostVO.class);
+            log.info(prePostVO.getPostId());
+        }
+        // 关闭连接
+        httpCoon.disconnect();
+    }
+
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int a = scanner.nextInt();
+        int b = scanner.nextInt();
+        System.out.println(a-b);
+
+
+        scanner.close();
+
+    }
+
+
+    @Test
+    public void testPyRecommend() throws Exception {
+        // 定义请求参数
+//        String userId = "1550319589076406273";
+        String userId = null;
+        // 定义请求路径
+        String prefix = "http://";
+        String ip = "27.158.103.146";
+        String port = "65000";
+        String path = "/api/v1/recommend/";
+        String requestUrl = prefix+ip+":"+port+path;
+        log.info(requestUrl);
+        if (userId!=null) {
+            requestUrl += userId;
+        }
+
+        // 创建连接并设置参数
+        URL url = new URL(requestUrl);
+        HttpURLConnection httpCoon = (HttpURLConnection) url.openConnection();
+        httpCoon.setRequestMethod("GET");
+        httpCoon.setRequestProperty("Charset","UTF-8");
+
+//         发起http请求 (getInputStream触发http请求)
+        if (httpCoon.getResponseCode() != 200) {
+            throw new Exception("调用请求异常,状态码:"+httpCoon.getResponseCode());
+        }
+
+        // 获取输入流和读数据
+        BufferedReader br = new BufferedReader(new InputStreamReader(httpCoon.getInputStream()));
+        String resultData = br.readLine();
+//        log.info(resultData);
+        JSONObject jsonObject = JSON.parseObject(resultData);
+        Integer code = (Integer) jsonObject.get("statue");
+        String msg = (String) jsonObject.get("message");
+        JSONArray data = jsonObject.getJSONArray("data");
+        log.info(code.toString());
+        log.info(msg);
+        for (int i = 0; i < data.size(); i++) {
+            String id = (String) data.get(i);
+            log.info(id);
+        }
+        // 关闭连接
+        httpCoon.disconnect();
+    }
+
+    @Test
+    public void testPyUrl() throws Exception {
+        List<PrePostVO> recByUrl = postsService.getRecByUrl(null,1,10);
+        log.info(recByUrl.toString());
+    }
+
+
 
 }

@@ -20,6 +20,7 @@ public class Message {
 
     private Long from_id;
     private Long to_id;
+    private String title;
     private String msg;
 
     @TableLogic

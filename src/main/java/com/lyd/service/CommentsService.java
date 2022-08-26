@@ -211,6 +211,11 @@ public class CommentsService {
         return res;
     }
 
+    /**
+     * @desc 获取某回答下评论数
+     * @param commentId 回答id
+     * @return
+     */
     public Long getCcCount(Long commentId) {
         QueryWrapper<CommentComments> wrapper = new QueryWrapper<>();
         wrapper.eq("comment_id",commentId);

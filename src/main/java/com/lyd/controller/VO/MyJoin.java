@@ -14,5 +14,6 @@ public class MyJoin {
     private String commentContent;
     private String likes;
     private String date;
+    private String kind;
 
 }

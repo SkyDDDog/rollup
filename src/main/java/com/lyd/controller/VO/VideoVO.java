@@ -7,11 +7,14 @@ public class VideoVO {
 
     private String videoId;
     private String userId;
-    //TODO
-    // 补充用户信息
+    private String userName;
     private String videoName;
     private String videoPhoto;
     private String videoKind;
+    private String download;
+    private String uploadTime;
+    private Boolean isCollected;
+//    private String seriesNum;
 
 
 }

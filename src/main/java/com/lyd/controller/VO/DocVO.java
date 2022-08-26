@@ -11,10 +11,12 @@ public class DocVO {
     private String kind;
     private Integer downloads;
     private Integer pageNum;
-    private String publisherName;
+    private String userId;
+    private String userName;
     private String docPath;
     private String photoPath;
     private String uploadDate;
+    private Boolean isCollected;
 
 
 }

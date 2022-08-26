@@ -62,7 +62,6 @@ public class CustomizeAuthenticationSuccessHandler implements AuthenticationSucc
         log.info("用户{}登录成功，信息已保存至redis",userDetails.getUsername());
 
 //        httpServletResponse.getWriter().write(JSON.toJSONString(ResultVO.result(ResultEnum.USER_LOGIN_SUCCESS,jwtToken,true)));
-        //TODO
         // 前端说不用security
 //        httpServletResponse.getWriter().write(JSON.toJSONString(Result.success(userDetails,jwtToken)));
     }
