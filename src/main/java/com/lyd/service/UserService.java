@@ -642,8 +642,14 @@ public class UserService {
             if (history.getSort()==1) {
                 historyVO.setSort("帖子");
                 Posts post = postsMapper.selectById(history.getTarget_id());
-                historyVO.setTitle(post.getTitle());
-                historyVO.setDiscussNum(post.getDiscuss_num().toString());
+                if (post!=null) {
+                    historyVO.setTitle(post.getTitle());
+                    historyVO.setDiscussNum(post.getDiscuss_num().toString());
+                } else {
+                    historyVO.setTitle("该帖子不存在或已被删除");
+                }
+
+
             } else if (history.getSort()==2) {
                 historyVO.setSort("文档");
                 historyVO.setTitle(documentMapper.selectById(history.getTarget_id()).getName());

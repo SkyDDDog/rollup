@@ -214,6 +214,7 @@ public class PostsService {
             wrapper.orderByDesc("discuss_num");
         } else if (sort==2) {
             wrapper.orderByDesc("gmt_created");
+            wrapper.ne("discuss_num",0);
         } else if (sort==3) {
             wrapper.orderByDesc("gmt_modified");
         }
@@ -232,6 +233,15 @@ public class PostsService {
      */
     public Long getCount() {
         return postsMapper.selectCount(null);
+    }
+
+    public Long getCount(Short sort) {
+        QueryWrapper<Posts> wrapper = null;
+        if (sort==2) {
+            wrapper = new QueryWrapper<>();
+            wrapper.ne("discuss_num",0);
+        }
+        return postsMapper.selectCount(wrapper);
     }
 
     /**
